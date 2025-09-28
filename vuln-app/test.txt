@@ -1,0 +1,121 @@
+#################################################################
+# Guide: How to Test Vulnerabilities on Your Local Practice App #
+#################################################################
+
+IMPORTANT SECURITY WARNING: This guide is for educational purposes ONLY. 
+These techniques should only be performed on the local, intentionally vulnerable 
+application you have set up. NEVER attempt these on any live or third-party website.
+
+---
+
+### 1. Brute Force ###
+
+Goal: To guess a user's password by trying many combinations.
+
+How to Test:
+1. On the main page, find the "Brute Force & Cookie Manipulation" section.
+2. Enter `admin` as the username.
+3. Try guessing the password. Enter common passwords like `password`, `123456`, or `admin`.
+4. The correct password is `password123`. Enter it to log in successfully.
+
+Why it Works: The server has no protection against multiple failed login attempts. It doesn't lock the account or slow down requests, so an attacker could use an automated tool to try thousands of passwords.
+
+---
+
+### 2. Cookie Manipulation ###
+
+Goal: To escalate your privileges from a normal user to an administrator.
+
+How to Test:
+1. First, log in as a normal user. Use username `user` and password `password`.
+2. Open your browser's Developer Tools (usually by pressing F12 or Ctrl+Shift+I).
+3. Go to the "Application" tab (in Chrome/Edge) or the "Storage" tab (in Firefox).
+4. On the left side, expand the "Cookies" section and select `http://localhost:3000`.
+5. You will see a cookie named `role` with the value `user`. Double-click on the value `user` and change it to `admin`.
+6. Press Enter and then refresh the page.
+
+Result: The welcome message at the top will now say "Welcome, admin!", indicating you have successfully escalated your privileges.
+
+Why it Works: The application trusts the `role` value stored in the cookie. By changing the cookie's value, you trick the application into giving you admin rights.
+
+---
+
+### 3. SQL Injection ###
+
+Goal: To trick the database into giving you more information than it should.
+
+How to Test:
+1. Go to the "SQL Injection" section.
+2. In the "User ID" input box, type the following payload: 1' OR '1'='1
+3. Click the "Search" button.
+
+Result: The application will display the data for ALL users in the database, not just one.
+
+Why it Works: The server insecurely pastes your input into the database query. The original query `... WHERE id = 1` becomes `... WHERE id = 1' OR '1'='1`. Since `'1'='1'` is always true, the condition becomes true for every user, so the database returns them all.
+
+---
+
+### 4. File Inclusion / Path Traversal ###
+
+Goal: To read sensitive files on the server that are outside of the intended web directory.
+
+How to Test:
+1. Go to the "File Inclusion" section.
+2. Click on "View Page 1". The URL in your browser will change to `http://localhost:3000/page?file=page1.txt`.
+3. Now, manually edit the URL. Change the `file` parameter to `../../package.json`.
+   The full URL should be: http://localhost:3000/page?file=../../package.json
+4. Press Enter.
+
+Result: The contents of the `package.json` file from your project's root directory will be displayed.
+
+Why it Works: The `../` characters tell the file system to move up one directory. By using `../../`, you "traverse" out of the intended folder and can access other files on the server.
+
+---
+
+### 5. Cross-Site Scripting (XSS) ###
+
+#### Reflected XSS
+Goal: To execute JavaScript in the browser by injecting a script into the URL.
+* How to Test: In the "Reflected XSS" section, type this into the search box: <script>alert('Hello from XSS!');</script>
+* Result: An alert box will pop up on your screen.
+* Why it Works: The server "reflects" your search term directly back into the page's HTML without cleaning it. The browser sees the `<script>` tag and executes the code.
+
+#### Stored XSS
+Goal: To inject a malicious script that gets saved to the server and affects every user.
+* How to Test: In the "Stored XSS" section, post this as a comment: <img src=x onerror=alert('Stored_XSS_Was_Here')>
+* Result: An alert box will pop up. If you refresh the page, it will pop up again because the malicious code is now stored in the guestbook.
+* Why it Works: Your malicious comment is saved in the database. When the page loads, it inserts your comment into the HTML. The browser tries to load the broken image, which triggers the `onerror` event and executes your script.
+
+#### DOM-based XSS
+Goal: To execute script by manipulating the URL's hash (#).
+* How to Test: Edit the URL in your address bar directly. Add the following to the end: #lang=<img src=x onerror=alert('DOM_XSS!')>
+  The full URL will be: http://localhost:3000/#lang=<img src=x onerror=alert('DOM_XSS!')>
+* Result: An alert box will pop up.
+* Why it Works: The payload never goes to the server. The page's own JavaScript reads the content from the URL hash and writes it directly into the page's HTML, causing the script to execute.
+
+---
+
+### 6. Cross-Site Request Forgery (CSRF) ###
+
+Goal: To trick a logged-in user into performing an unintended action.
+
+How to Test:
+1. First, make sure you are logged into the application (e.g., as username `user`).
+2. On your computer's desktop, create a new HTML file named `attack.html`.
+3. Copy and paste the following code into `attack.html` and save it:
+
+   <!DOCTYPE html>
+   <html>
+   <head><title>You Won!</title></head>
+   <body>
+       <h1>Congratulations! You won a prize!</h1>
+       <p>This page loaded a hidden image that just changed your password on the vulnerable app.</p>
+       <img src="http://localhost:3000/change-password?newpassword=hacked" width="1" height="1">
+   </body>
+   </html>
+
+4. Open the `attack.html` file in the same browser where you are logged in.
+
+Result: As soon as the page loads, your browser makes a request to the vulnerable app in the background, changing your password to "hacked" without you clicking anything on the app's site.
+
+Why it Works: The change password feature lacks a CSRF token (a unique code to verify the request is legitimate). Without it, the server can't tell the difference between a real request you made and a forged one from another website.

