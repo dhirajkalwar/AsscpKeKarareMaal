@@ -91,10 +91,8 @@ We will use the **`.innerHTML`** property, which is insecure because it parses t
     
     <script>
         // Malicious input simulating an attacker's comment
-        const userInput = '<img src=x onerror=alert("XSS Attack!")>';
-        
-        // VULNERABLE: Using innerHTML allows the browser to execute the script in the onerror attribute.
-        document.getElementById('comment-output').innerHTML = userInput;
+        const userInput = '<img src="x" onerror="alert(\'XSS Attack!\')">';
+     document.getElementById('comment-output').innerHTML = userInput;
     </script>
 </body>
 </html>
