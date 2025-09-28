@@ -71,53 +71,14 @@ This experiment requires setting up a simple client-server environment to simula
 **1. Set Up the Vulnerable Application (Conceptual `vulnerable_app.py`)**
 This conceptual application simulates a user logged in with a session cookie and an endpoint that changes the user's email via a simple `POST` request, with **no token validation**.
 
-*Conceptual Vulnerable Code:*
-
-```python
-# Server-side pseudo-code (e.g., Flask)
-@app.route('/change_email', methods=['POST'])
-def change_email():
-    # Vulnerable: It only checks if the user is logged in (via session cookie).
-    if session.is_authenticated:
-        new_email = request.form['email']
-        # In a real app, the email would be updated in the database.
-        print(f"ATTACK SUCCESSFUL: Email changed to {new_email}")
-        return "Email change successful."
-    return "Not logged in."
-```
 
 **2. Create the Attacker's Webpage (`attacker.html`)**
 This HTML file simulates the malicious site. It contains a hidden form targeting the vulnerable application's change-email endpoint and uses JavaScript to automatically submit the form when the page loads.
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Evil Attacker Site</title>
-</head>
-<body onload="document.getElementById('csrf-form').submit()">
-    <h1>Free Lottery! Click Anywhere!</h1>
-    
-    <!-- The hidden, forged request form -->
-    <form id="csrf-form" action="http://localhost:5000/change_email" method="POST" style="display: none;">
-        <!-- Attacker inserts their desired email address -->
-        <input type="hidden" name="email" value="attacker@evil.com">
-    </form>
-    
-    <p>Loading your prize...</p>
-
-    <script>
-        // Note: The form is automatically submitted on body load.
-        console.log("Forged request submitted to localhost:5000/change_email in the background.");
-    </script>
-</body>
-</html>
-```
 
 **3. Execute the Attack and Verify**
 
-  * **Step A (Authentication):** Start the vulnerable server (`vulnerable_app.py`). Open a browser tab and **log into** the vulnerable application (establish a session/cookie).
+  * **Step A (Authentication):** Start the vulnerable server (`vulnerable_app.py`). Open a browser tab and **log into** the vulnerable application `/login` (establish a session/cookie).
   * **Step B (The Lure):** Open a **new tab** and load the local `attacker.html` file. The form will submit immediately.
   * **Step C (Verification):** Return to the server's terminal or log output. You will see the message: `ATTACK SUCCESSFUL: Email changed to attacker@evil.com`. This confirms the CSRF attack successfully hijacked the authenticated session.
 
@@ -128,58 +89,17 @@ We now modify the server application to use the Synchronizer Token Pattern.
 **1. Implement CSRF Protection (Conceptual `protected_app.py`)**
 The server must now generate a token, include it in the form, and validate it on submission.
 
-*Conceptual Protected Code:*
 
-```python
-# Server-side pseudo-code (e.g., Flask with CSRF protection)
-import random, string
 
-# Function to generate a random token
-def generate_csrf_token():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
-
-# 1. When serving the form:
-@app.route('/settings')
-def show_settings():
-    # 1a. Generate and store token in session
-    token = generate_csrf_token()
-    session['csrf_token'] = token
-    # 1b. Pass token to form template
-    return render_template('settings.html', csrf_token=token)
-
-# 2. On form submission:
-@app.route('/change_email', methods=['POST'])
-def change_email_protected():
-    submitted_token = request.form['csrf_token']
-    session_token = session.get('csrf_token')
-
-    # 3. Token Validation: Compare submitted token with stored session token
-    if submitted_token and submitted_token == session_token:
-        # Check if the user is authenticated (via session cookie)
-        if session.is_authenticated:
-            new_email = request.form['email']
-            print(f"SUCCESS: Legitimate email change to {new_email}")
-            return "Email change successful."
-    
-    # 4. Request Rejected
-    print("ATTACK FAILED: CSRF Token mismatch or missing.")
-    return "Error 403: Forbidden - Invalid token."
-```
 
 **2. Modify the Attacker's Webpage (`attacker.html`)**
 The attacker's page is not changed, as they have no way to obtain the secret token to include it in the hidden form.
 
-```html
-<!-- The attacker's form remains the same, it is missing the required csrf_token field -->
-<form id="csrf-form" action="http://localhost:5000/change_email" method="POST" style="display: none;">
-    <input type="hidden" name="email" value="attacker@evil.com">
-    <!-- Missing: <input type="hidden" name="csrf_token" value="[SECRET_TOKEN]"> -->
-</form>
-```
+
 
 **3. Verify the Protection**
 
-  * **Step A (Authentication):** Start the **protected** server (`protected_app.py`). Open a browser tab and **log into** the protected application (establish a session/cookie). This step generates the correct token on the server.
+  * **Step A (Authentication):** Start the **protected** server (`protected_app.py`). Open a browser tab and **log into** the protected application `/login` (establish a session/cookie). This step generates the correct token on the server.
   * **Step B (The Lure):** Open a **new tab** and load the local `attacker.html` file. The form submits automatically, but it *fails* to include the required `csrf_token`.
   * **Step C (Verification):** Return to the server's terminal or log output. You will see the message: `ATTACK FAILED: CSRF Token mismatch or missing.` The server successfully rejected the request, confirming the defense is working.
 

